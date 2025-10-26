@@ -5,6 +5,7 @@ A web application that uses Particle Swarm Optimization (PSO) to reconstruct ima
 ## 🎨 What It Does
 
 This application demonstrates particle swarm optimization by:
+
 - Taking an uploaded image as input
 - Using a swarm of "particles" (each representing a different arrangement of triangles)
 - Evolving these particles over time to find the best triangle arrangement
@@ -35,7 +36,7 @@ start index.html
 
 1. **Upload an Image**: Click the "📁 Upload Image" button and select an image file
 2. **Configure Parameters** (optional):
-   - **Number of Triangles**: How many triangles to use (10-200)
+   - **Number of Triangles**: How many triangles to use (10-300)
    - **Swarm Size**: Number of particles in the swarm (5-50)
    - **Inertia (w)**: Controls momentum of particles (0-1)
    - **Cognitive (c1)**: How much particles trust their own best position (0-3)
@@ -49,10 +50,12 @@ start index.html
 ### Particle Swarm Optimization
 
 Each particle represents a complete image composed of N triangles. Each triangle has 10 parameters:
+
 - `(x1, y1)`, `(x2, y2)`, `(x3, y3)`: Vertex coordinates
 - `r`, `g`, `b`, `a`: Color (red, green, blue, alpha)
 
 The algorithm:
+
 1. **Initialization**: Creates random particles (triangle arrangements)
 2. **Fitness Evaluation**: Compares each particle's rendering to the source image
 3. **Update**: Particles move through the search space based on:
@@ -71,23 +74,28 @@ Lower fitness scores indicate better matches to the source image.
 ## 🎛️ Parameter Guide
 
 ### Number of Triangles
+
 - **Low (10-30)**: Fast, abstract results
 - **Medium (40-100)**: Balanced detail and performance
-- **High (100-200)**: More detail, slower convergence
+- **High (100-300)**: More detail, slower convergence
 
 ### Swarm Size
+
 - **Small (5-15)**: Faster iterations, may converge to local optima
 - **Large (20-50)**: Slower iterations, better global search
 
 ### Inertia (w)
+
 - **Low (0-0.5)**: Quick changes, good for fine-tuning
 - **High (0.6-1.0)**: Smoother movement, better exploration
 
 ### Cognitive Coefficient (c1)
+
 - Controls individual particle's "memory"
 - Higher values make particles trust their own experience more
 
 ### Social Coefficient (c2)
+
 - Controls swarm's collective influence
 - Higher values make particles follow the best solution more closely
 
@@ -106,6 +114,7 @@ Lower fitness scores indicate better matches to the source image.
 - **HTML5 Canvas**: For efficient rendering
 - **Responsive Design**: Works on desktop and mobile
 - **Real-time Updates**: Uses requestAnimationFrame for smooth visualization
+- **Geometry bounds**: Triangle vertices can extend up to 50px beyond the canvas on all sides to allow richer shapes
 
 ## 📝 License
 
@@ -114,6 +123,7 @@ This project is open source and available under the MIT License.
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to:
+
 - Report bugs
 - Suggest new features
 - Submit pull requests
