@@ -9,6 +9,7 @@ class PSOImagePainter {
     this.isRunning = false;
     this.animationFrameId = null;
     this.maxCanvasSize = 400; // Maximum canvas dimension for performance
+    this.lastTrianglesSynced = null; // Track last PSO triangle count reflected in the UI
 
     this.initializeElements();
     this.attachEventListeners();
@@ -165,6 +166,8 @@ class PSOImagePainter {
     };
 
     this.pso = new PSO(config);
+    // Remember the current triangles count so we only sync UI when PSO changes it
+    this.lastTrianglesSynced = this.pso.config.numTriangles;
 
     // Set source image data for fitness calculation
     const imageData = this.sourceCtx.getImageData(
@@ -182,6 +185,17 @@ class PSOImagePainter {
     if (!this.pso) {
       alert("Please upload an image first!");
       return;
+    }
+
+    // Ensure PSO reflects current slider values before starting
+    const desiredTriangles = parseInt(this.numTrianglesSlider.value, 10);
+    const desiredSwarm = parseInt(this.swarmSizeSlider.value, 10);
+    if (
+      !this.pso ||
+      this.pso.config.numTriangles !== desiredTriangles ||
+      this.pso.config.swarmSize !== desiredSwarm
+    ) {
+      this.initializePSO();
     }
 
     this.isRunning = true;
@@ -270,14 +284,16 @@ class PSOImagePainter {
     this.iterationDisplay.textContent = this.pso.getIteration();
 
     // Reflect dynamic triangle count increases in the UI slider/label
+    // Only sync when the PSO's count actually changes (e.g., due to increments)
     const currentTriangles = this.pso.config?.numTriangles;
     if (
       typeof currentTriangles === "number" &&
-      parseInt(this.numTrianglesSlider.value, 10) !== currentTriangles
+      currentTriangles !== this.lastTrianglesSynced
     ) {
       this.numTrianglesSlider.value = String(currentTriangles);
       const labelEl = document.getElementById("numTrianglesValue");
       if (labelEl) labelEl.textContent = String(currentTriangles);
+      this.lastTrianglesSynced = currentTriangles;
     }
 
     const fitness = this.pso.getBestFitness();
