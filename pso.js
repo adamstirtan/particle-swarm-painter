@@ -177,16 +177,23 @@ class Swarm {
      * Perform one iteration of PSO
      */
     iterate() {
+        let bestParticleThisIteration = null;
+        
         // Evaluate fitness for all particles
         for (let particle of this.particles) {
             particle.fitness = this.calculateFitness(particle);
             particle.updateBest();
             
-            // Update global best
+            // Track best particle in this iteration
             if (particle.fitness < this.globalBestFitness) {
                 this.globalBestFitness = particle.fitness;
-                this.globalBest = particle.position.map(t => t.clone());
+                bestParticleThisIteration = particle;
             }
+        }
+        
+        // Clone global best only once per iteration if we found a better solution
+        if (bestParticleThisIteration) {
+            this.globalBest = bestParticleThisIteration.position.map(t => t.clone());
         }
         
         // Update all particles

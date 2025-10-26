@@ -35,9 +35,11 @@ let swarm = null;
 let isRunning = false;
 let animationFrameId = null;
 let sourceImage = null;
+let lastFrameTime = 0;
 
 // Constants
 const MAX_CANVAS_SIZE = 400;
+const FRAME_INTERVAL = 50; // Milliseconds between frames (~20 FPS for smoother performance)
 
 /**
  * Initialize event listeners
@@ -183,6 +185,7 @@ function startOptimization() {
             numTrianglesInput.disabled = true;
             swarmSizeInput.disabled = true;
             
+            lastFrameTime = Date.now();
             runOptimization();
         }, 100);
     } else {
@@ -191,6 +194,7 @@ function startOptimization() {
         startBtn.disabled = true;
         pauseBtn.disabled = false;
         statusDisplay.textContent = 'Optimizing...';
+        lastFrameTime = Date.now();
         runOptimization();
     }
 }
@@ -201,15 +205,23 @@ function startOptimization() {
 function runOptimization() {
     if (!isRunning) return;
     
-    // Perform PSO iteration
-    swarm.iterate();
+    const currentTime = Date.now();
+    const elapsed = currentTime - lastFrameTime;
     
-    // Update display
-    iterationDisplay.textContent = swarm.getIteration();
-    bestFitnessDisplay.textContent = swarm.getBestFitness().toFixed(2);
-    
-    // Render best solution
-    swarm.renderBest();
+    // Throttle to avoid excessive computation
+    if (elapsed >= FRAME_INTERVAL) {
+        // Perform PSO iteration
+        swarm.iterate();
+        
+        // Update display
+        iterationDisplay.textContent = swarm.getIteration();
+        bestFitnessDisplay.textContent = swarm.getBestFitness().toFixed(2);
+        
+        // Render best solution
+        swarm.renderBest();
+        
+        lastFrameTime = currentTime;
+    }
     
     // Continue loop
     animationFrameId = requestAnimationFrame(runOptimization);
