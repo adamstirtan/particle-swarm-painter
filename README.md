@@ -41,6 +41,8 @@ start index.html
    - **Inertia (w)**: Controls momentum of particles (0-1)
    - **Cognitive (c1)**: How much particles trust their own best position (0-3)
    - **Social (c2)**: How much particles trust the swarm's best position (0-3)
+     - **Max Alpha**: Caps triangle opacity (0.1–1.0). Lowering this prevents highly opaque triangles from dominating.
+   - **Increment Triangles**: When enabled, adds +10 triangles every 50 iterations to gradually increase detail.
 3. **Start Optimization**: Click "▶ Start" to begin the PSO algorithm
 4. **Monitor Progress**: Watch the iteration count and fitness score improve
 5. **Save Result**: Click "💾 Save Image" to download your reconstruction
@@ -95,6 +97,20 @@ Lower fitness scores indicate better matches to the source image.
 - Higher values make particles trust their own experience more
 
 ### Social Coefficient (c2)
+
+### Max Alpha
+
+- When combined with Increment Triangles, you can keep opacity modest while adding detail over time.
+
+### Increment Triangles
+
+- Adds ten triangles to the model every 50 iterations when enabled.
+- Helps start fast with fewer primitives and grow detail over time.
+- There’s an internal safety cap (default 1000 triangles) to avoid unbounded growth.
+
+- Caps the maximum opacity of triangles.
+- Lower values encourage more subtle layering and reduce flat, opaque regions.
+- Suggested: 0.5–0.9 for most images; try 0.3–0.6 for softer, painterly effects.
 
 - Controls swarm's collective influence
 - Higher values make particles follow the best solution more closely

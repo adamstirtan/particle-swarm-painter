@@ -4,7 +4,7 @@
  */
 
 class Triangle {
-  constructor(width, height) {
+  constructor(width, height, maxAlpha = 1) {
     // Initialize triangle with random vertices and color
     this.x1 = Math.random() * width;
     this.y1 = Math.random() * height;
@@ -15,7 +15,9 @@ class Triangle {
     this.r = Math.random() * 255;
     this.g = Math.random() * 255;
     this.b = Math.random() * 255;
-    this.a = Math.random() * 0.6 + 0.2; // Alpha between 0.2 and 0.8
+    const maxA = Math.max(0.1, Math.min(1, maxAlpha));
+    // Alpha initialized between 0.1 and maxAlpha
+    this.a = 0.1 + Math.random() * (maxA - 0.1);
   }
 
   toArray() {
@@ -56,16 +58,17 @@ class Triangle {
 }
 
 class Particle {
-  constructor(numTriangles, width, height, margin = 0) {
+  constructor(numTriangles, width, height, margin = 0, maxAlpha = 1) {
     this.width = width;
     this.height = height;
     this.numTriangles = numTriangles;
     this.margin = margin;
+    this.maxAlpha = Math.max(0.1, Math.min(1, maxAlpha));
 
     // Current position (triangles)
     this.triangles = [];
     for (let i = 0; i < numTriangles; i++) {
-      this.triangles.push(new Triangle(width, height));
+      this.triangles.push(new Triangle(width, height, this.maxAlpha));
     }
 
     // Velocity for each parameter of each triangle
@@ -123,7 +126,7 @@ class Particle {
       t.r = Math.max(0, Math.min(255, t.r));
       t.g = Math.max(0, Math.min(255, t.g));
       t.b = Math.max(0, Math.min(255, t.b));
-      t.a = Math.max(0.1, Math.min(1, t.a));
+      t.a = Math.max(0.1, Math.min(this.maxAlpha, t.a));
     });
   }
 }
@@ -140,6 +143,24 @@ class PSO {
       social: typeof config.social === "number" ? config.social : 1.5,
       width: config.width,
       height: config.height,
+      maxAlpha: typeof config.maxAlpha === "number" ? config.maxAlpha : 0.8,
+      // Incremental triangle growth
+      incrementalTriangles:
+        typeof config.incrementalTriangles === "boolean"
+          ? config.incrementalTriangles
+          : false,
+      trianglesIncrementInterval:
+        typeof config.trianglesIncrementInterval === "number"
+          ? config.trianglesIncrementInterval
+          : 50,
+      trianglesIncrementAmount:
+        typeof config.trianglesIncrementAmount === "number"
+          ? config.trianglesIncrementAmount
+          : 10,
+      maxTrianglesCap:
+        typeof config.maxTrianglesCap === "number"
+          ? config.maxTrianglesCap
+          : 1000,
       // Anti-stagnation defaults
       stagnationWindow:
         typeof config.stagnationWindow === "number"
@@ -183,7 +204,8 @@ class PSO {
           this.config.numTriangles,
           this.config.width,
           this.config.height,
-          this.config.offscreenMargin
+          this.config.offscreenMargin,
+          this.config.maxAlpha
         )
       );
     }
@@ -296,6 +318,23 @@ class PSO {
         this.noImproveIterations = 0;
       }
     }
+
+    // Incrementally add triangles every N iterations if enabled
+    if (
+      this.config.incrementalTriangles &&
+      this.iteration % this.config.trianglesIncrementInterval === 0
+    ) {
+      const currentCount = this.config.numTriangles;
+      if (currentCount < this.config.maxTrianglesCap) {
+        const remaining = this.config.maxTrianglesCap - currentCount;
+        const inc = Math.max(
+          1,
+          Math.min(remaining, Math.floor(this.config.trianglesIncrementAmount))
+        );
+        this.increaseTrianglesBy(inc);
+        this.config.numTriangles = currentCount + inc;
+      }
+    }
   }
 
   getBestTriangles() {
@@ -328,6 +367,36 @@ class PSO {
       if (typeof config.social === "number") {
         this.config.social = config.social;
       }
+      if (typeof config.maxAlpha === "number") {
+        // Clamp to [0.1, 1]
+        this.config.maxAlpha = Math.max(0.1, Math.min(1, config.maxAlpha));
+        // Propagate to existing particles and clamp their positions
+        this.particles.forEach((p) => {
+          p.maxAlpha = this.config.maxAlpha;
+          p.clampPosition();
+        });
+      }
+      if (typeof config.incrementalTriangles === "boolean") {
+        this.config.incrementalTriangles = config.incrementalTriangles;
+      }
+      if (typeof config.trianglesIncrementInterval === "number") {
+        this.config.trianglesIncrementInterval = Math.max(
+          1,
+          Math.floor(config.trianglesIncrementInterval)
+        );
+      }
+      if (typeof config.trianglesIncrementAmount === "number") {
+        this.config.trianglesIncrementAmount = Math.max(
+          1,
+          Math.floor(config.trianglesIncrementAmount)
+        );
+      }
+      if (typeof config.maxTrianglesCap === "number") {
+        this.config.maxTrianglesCap = Math.max(
+          1,
+          Math.floor(config.maxTrianglesCap)
+        );
+      }
       if (typeof config.stagnationWindow === "number") {
         this.config.stagnationWindow = config.stagnationWindow;
       }
@@ -342,6 +411,49 @@ class PSO {
         // Propagate to existing particles
         this.particles.forEach((p) => (p.margin = this.config.offscreenMargin));
       }
+    }
+  }
+
+  // Add k triangles to all particles and extend global best
+  increaseTrianglesBy(k) {
+    try {
+      // Extend each particle
+      this.particles.forEach((p) => {
+        for (let i = 0; i < k; i++) {
+          const nt = new Triangle(p.width, p.height, p.maxAlpha);
+          p.triangles.push(nt);
+          p.numTriangles += 1;
+          // Extend velocity with 10 new components
+          for (let v = 0; v < 10; v++) {
+            p.velocity.push((Math.random() - 0.5) * 10);
+          }
+          // Extend personal best with a clone of the new triangle
+          p.bestTriangles.push(nt.clone());
+        }
+        // Allow re-discovery of best in the new space for this particle
+        p.bestFitness = Infinity;
+        p.fitness = Infinity;
+      });
+
+      // Extend global best representation and reset fitness so it can be re-established
+      if (!this.globalBestTriangles) {
+        // Initialize from first particle if needed
+        this.globalBestTriangles = this.particles[0].triangles.map((t) =>
+          t.clone()
+        );
+      } else {
+        for (let i = 0; i < k; i++) {
+          const nt = new Triangle(
+            this.config.width,
+            this.config.height,
+            this.config.maxAlpha
+          );
+          this.globalBestTriangles.push(nt);
+        }
+      }
+      this.globalBestFitness = Infinity;
+    } catch (e) {
+      // Fail-safe: ignore errors
     }
   }
 
@@ -364,7 +476,7 @@ class PSO {
         // Reinitialize triangles
         p.triangles = [];
         for (let t = 0; t < p.numTriangles; t++) {
-          p.triangles.push(new Triangle(p.width, p.height));
+          p.triangles.push(new Triangle(p.width, p.height, p.maxAlpha));
         }
         // Reset velocities
         p.velocity = [];
