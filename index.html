@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Swarm Painter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Particle Swarm Painter</h1>
+            <p>Reconstruct images using Particle Swarm Optimization with semi-transparent triangles</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Image Upload Section -->
+            <section class="upload-section">
+                <h2>Upload Image</h2>
+                <input type="file" id="imageUpload" accept="image/*">
+                <button id="resetBtn" disabled>Reset</button>
+            </section>
+
+            <!-- Canvas Display -->
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <h3>Source Image</h3>
+                    <canvas id="sourceCanvas"></canvas>
+                </div>
+                <div class="canvas-wrapper">
+                    <h3>PSO Reconstruction</h3>
+                    <canvas id="reconstructionCanvas"></canvas>
+                    <button id="saveBtn" disabled>Save Image</button>
+                </div>
+            </div>
+
+            <!-- Controls Panel -->
+            <section class="controls-panel">
+                <h2>PSO Parameters</h2>
+                
+                <div class="control-group">
+                    <label for="numTriangles">Number of Triangles: <span id="numTrianglesValue">50</span></label>
+                    <input type="range" id="numTriangles" min="10" max="200" value="50" step="10">
+                </div>
+
+                <div class="control-group">
+                    <label for="swarmSize">Swarm Size: <span id="swarmSizeValue">20</span></label>
+                    <input type="range" id="swarmSize" min="5" max="50" value="20" step="5">
+                </div>
+
+                <div class="control-group">
+                    <label for="inertia">Inertia (w): <span id="inertiaValue">0.7</span></label>
+                    <input type="range" id="inertia" min="0" max="1" value="0.7" step="0.1">
+                </div>
+
+                <div class="control-group">
+                    <label for="cognitive">Cognitive Coefficient (c1): <span id="cognitiveValue">1.5</span></label>
+                    <input type="range" id="cognitive" min="0" max="3" value="1.5" step="0.1">
+                </div>
+
+                <div class="control-group">
+                    <label for="social">Social Coefficient (c2): <span id="socialValue">1.5</span></label>
+                    <input type="range" id="social" min="0" max="3" value="1.5" step="0.1">
+                </div>
+
+                <div class="button-group">
+                    <button id="startBtn" disabled>Start</button>
+                    <button id="pauseBtn" disabled>Pause</button>
+                </div>
+            </section>
+
+            <!-- Progress Display -->
+            <section class="progress-section">
+                <h2>Progress</h2>
+                <div class="progress-info">
+                    <p>Iteration: <span id="iteration">0</span></p>
+                    <p>Best Fitness: <span id="bestFitness">N/A</span></p>
+                    <p>Status: <span id="status">Ready to upload image</span></p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="triangle.js"></script>
+    <script src="pso.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

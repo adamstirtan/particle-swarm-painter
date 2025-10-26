@@ -1,0 +1,267 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+header p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.main-content {
+    padding: 30px;
+}
+
+/* Upload Section */
+.upload-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.upload-section h2 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+#imageUpload {
+    margin-right: 10px;
+    padding: 10px;
+    background: white;
+    border: 2px solid #667eea;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#resetBtn {
+    padding: 10px 20px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.3s;
+}
+
+#resetBtn:hover:not(:disabled) {
+    background: #c82333;
+}
+
+#resetBtn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Canvas Container */
+.canvas-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.canvas-wrapper {
+    text-align: center;
+}
+
+.canvas-wrapper h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+canvas {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    max-width: 100%;
+    height: auto;
+    background: #f8f9fa;
+    display: block;
+    margin: 0 auto;
+}
+
+#saveBtn {
+    margin-top: 15px;
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.3s;
+}
+
+#saveBtn:hover:not(:disabled) {
+    background: #218838;
+}
+
+#saveBtn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Controls Panel */
+.controls-panel {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.controls-panel h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.control-group {
+    margin-bottom: 20px;
+}
+
+.control-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.control-group input[type="range"] {
+    width: 100%;
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.control-group input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.button-group button {
+    flex: 1;
+    padding: 15px;
+    font-size: 1.1em;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+#startBtn {
+    background: #28a745;
+    color: white;
+}
+
+#startBtn:hover:not(:disabled) {
+    background: #218838;
+}
+
+#startBtn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+#pauseBtn {
+    background: #ffc107;
+    color: #333;
+}
+
+#pauseBtn:hover:not(:disabled) {
+    background: #e0a800;
+}
+
+#pauseBtn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Progress Section */
+.progress-section {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 8px;
+}
+
+.progress-section h2 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.progress-info p {
+    font-size: 1.1em;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.progress-info span {
+    font-weight: bold;
+    color: #667eea;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .canvas-container {
+        grid-template-columns: 1fr;
+    }
+    
+    header h1 {
+        font-size: 1.8em;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+}
