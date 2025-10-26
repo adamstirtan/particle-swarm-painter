@@ -152,7 +152,7 @@ class PSO {
       trianglesIncrementInterval:
         typeof config.trianglesIncrementInterval === "number"
           ? config.trianglesIncrementInterval
-          : 50,
+          : 100,
       trianglesIncrementAmount:
         typeof config.trianglesIncrementAmount === "number"
           ? config.trianglesIncrementAmount
