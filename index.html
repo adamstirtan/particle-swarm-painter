@@ -3,187 +3,754 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Particle Swarm Painter</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title data-slot="page-title">Particle Swarm Painter</title>
+
+    <!--
+      Reusable UI Template
+      ----------------------------------
+      How to use:
+      - Replace brand title/badge using the elements with data-slot attributes
+      - Put your primary app controls inside #top-controls (centered in topbar)
+      - Add buttons/links to #actions (right side of topbar)
+      - Add your configuration panels inside #sidebar-panels
+      - Render your main content (canvas, WebGL, charts, etc.) inside #canvas-container
+      - Use TemplateUI.openModal()/closeModal() for the built-in modal
+
+      Optional:
+      - You can remove the modal/drawer code if unnecessary
+      - Include your own scripts after this file (e.g., p5.js, Chart.js, your app code)
+    -->
+
+    <style>
+      :root {
+        --bg: #0e1320;
+        --bg-2: #0b1020;
+        --panel: #121a2b;
+        --panel-2: #0f1730;
+        --border: #1f2a44;
+        --text: #e7edf6;
+        --muted: #a7b1c2;
+        --accent: #5cf2c7;
+        --accent-2: #57a6ff;
+        --danger: #ff6b6b;
+        --ok: #4ecdc4;
+        --bar-h: 56px;
+        --sidebar-w: 380px;
+        --radius: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
+          Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji",
+          "Segoe UI Emoji";
+        color: var(--text);
+        background: var(--bg);
+        overflow: hidden;
+      }
+
+      .app {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Top bar */
+      .topbar {
+        height: var(--bar-h);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+      .brand .menu-btn {
+        display: none;
+      }
+      .brand-title {
+        font-size: 16px;
+        color: var(--text);
+      }
+      .brand-badge {
+        font-size: 12px;
+        color: var(--muted);
+        padding-left: 8px;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* Centered controls in top bar */
+      .top-controls {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        gap: 8px;
+      }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--text);
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .icon-btn:hover {
+        border-color: var(--accent);
+      }
+      .toggle-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 36px;
+        padding: 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--muted);
+        cursor: pointer;
+        user-select: none;
+      }
+      .toggle-label input {
+        accent-color: var(--accent-2);
+      }
+
+      /* Layout */
+      .app-body {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+      .sidebar {
+        width: var(--sidebar-w);
+        background: var(--panel);
+        border-right: 1px solid var(--border);
+        padding: 16px;
+        overflow: auto;
+      }
+      .main {
+        flex: 1;
+        position: relative;
+        min-width: 0;
+        background: #000;
+        display: flex;
+      }
+
+      #canvas-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #canvas-container canvas {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        border-radius: 0;
+      }
+
+      /* Panels inside sidebar */
+      .panel {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+      }
+      .panel + .panel {
+        margin-top: 16px;
+      }
+      .panel h3 {
+        margin: 0 0 12px;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        color: var(--muted);
+      }
+
+      /* Simple stats grid (optional) */
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
+      }
+      .stat-box {
+        padding: 0;
+        border-radius: 0;
+        border: none;
+        background: transparent;
+      }
+      .stat-box h4 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .team-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .stat-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        padding: 4px 0;
+        color: var(--muted);
+      }
+      .stat-item span:last-child {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      /* Chart regions (optional) */
+      .chart-wrap {
+        width: 100%;
+        height: 200px;
+      }
+      .chart-wrap canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      /* Controls */
+      .control-group {
+        margin: 12px 0;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px 12px;
+        align-items: center;
+      }
+      .control-group label {
+        font-size: 12px;
+        color: var(--muted);
+        grid-column: 1 / span 2;
+      }
+      .control-group input[type="range"] {
+        width: 100%;
+      }
+      .control-group .value {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .buttons {
+        display: flex;
+        gap: 8px;
+      }
+      button {
+        background: transparent;
+        border: 1px solid var(--accent);
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(1.1);
+      }
+
+      /* Modal */
+      .modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 80;
+      }
+      .modal-backdrop.show {
+        display: block;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(760px, 92vw);
+        max-height: 80vh;
+        overflow: auto;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        z-index: 90;
+      }
+      .modal.show {
+        display: block;
+      }
+      .modal header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .modal header h3 {
+        margin: 0;
+        font-size: 16px;
+        color: var(--text);
+      }
+      .modal .close-btn {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+      }
+      .modal section {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .modal section h4 {
+        margin: 12px 0 6px;
+        font-size: 13px;
+        color: var(--text);
+      }
+
+      /* Drawer on mobile */
+      @media (max-width: 900px) {
+        .brand .menu-btn {
+          display: inline-flex;
+        }
+        .app-body {
+          position: relative;
+        }
+        .sidebar {
+          position: fixed;
+          top: var(--bar-h);
+          left: 0;
+          height: calc(100vh - var(--bar-h));
+          width: min(86vw, 380px);
+          transform: translateX(-100%);
+          transition: transform 0.25s ease;
+          z-index: 60;
+        }
+        .sidebar.open {
+          transform: translateX(0);
+        }
+        .drawer-backdrop {
+          display: none;
+          position: fixed;
+          inset: 0;
+          top: var(--bar-h);
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 55;
+        }
+        .drawer-backdrop.show {
+          display: block;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div class="container">
-      <header>
-        <h1>Particle Swarm Painter</h1>
-        <p>
-          Use Particle Swarm Optimization to reconstruct images with triangles
-        </p>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <button
+            id="menu-toggle"
+            class="icon-btn menu-btn"
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
+          <div class="brand-title">
+            <span data-slot="brand-title">Particle Swarm Painter</span>
+            <span class="brand-badge" data-slot="brand-badge"
+              >An experiment by Adam Stirtan</span
+            >
+          </div>
+        </div>
+        <div class="top-controls" id="top-controls">
+          <!-- Controls moved to sidebar -->
+        </div>
+        <div class="actions" id="actions">
+          <!-- Right-side actions (e.g., info button, links) -->
+          <button class="icon-btn" id="template-info-btn" aria-label="About">
+            i
+          </button>
+        </div>
       </header>
 
-      <div class="upload-section">
-        <label for="imageUpload" class="upload-button">
-          <span>📁 Upload Image</span>
-          <input type="file" id="imageUpload" accept="image/*" />
-        </label>
+      <div class="app-body">
+        <aside id="sidebar" class="sidebar">
+          <div id="sidebar-panels">
+            <!-- Progress Panel -->
+            <div class="panel">
+              <h3>Progress</h3>
+              <div class="stat-item">
+                <span>Iteration</span><span id="iteration">0</span>
+              </div>
+              <div class="stat-item">
+                <span>Best Fitness</span><span id="fitness">N/A</span>
+              </div>
+              <div class="stat-item">
+                <span>Status</span><span id="status">Ready</span>
+              </div>
+            </div>
+
+            <!-- Fitness Chart Panel -->
+            <div class="panel">
+              <h3>Fitness</h3>
+              <div class="chart-wrap">
+                <canvas id="fitnessChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Controls Panel -->
+            <div class="panel">
+              <h3>Controls</h3>
+              <div class="control-group" style="grid-template-columns: 1fr">
+                <label
+                  class="toggle-label"
+                  for="imageUpload"
+                  title="Upload image"
+                  style="justify-content: center"
+                >
+                  <input
+                    type="file"
+                    id="imageUpload"
+                    accept="image/*"
+                    style="display: none"
+                  />
+                  📁 Upload Image
+                </label>
+              </div>
+              <div class="buttons" style="flex-wrap: wrap">
+                <button id="startButton" title="Start">▶ Start</button>
+                <button id="pauseButton" title="Pause" disabled>⏸ Pause</button>
+                <button id="resetButton" title="Reset">↻ Reset</button>
+                <button id="saveButton" title="Save">💾 Save</button>
+              </div>
+            </div>
+
+            <!-- Configuration Panel -->
+            <div class="panel">
+              <h3>Configuration</h3>
+
+              <div class="control-group">
+                <label for="numTriangles"
+                  >Number of Triangles:
+                  <span id="numTrianglesValue">10</span></label
+                >
+                <input
+                  type="range"
+                  id="numTriangles"
+                  min="10"
+                  max="1000"
+                  value="10"
+                  step="10"
+                />
+                <div class="value"></div>
+              </div>
+
+              <div class="control-group">
+                <label for="swarmSize"
+                  >Swarm Size: <span id="swarmSizeValue">250</span></label
+                >
+                <input
+                  type="range"
+                  id="swarmSize"
+                  min="5"
+                  max="1000"
+                  value="250"
+                  step="5"
+                />
+                <div class="value"></div>
+              </div>
+
+              <div class="control-group">
+                <label for="inertia"
+                  >Inertia (w): <span id="inertiaValue">0.7</span></label
+                >
+                <input
+                  type="range"
+                  id="inertia"
+                  min="0"
+                  max="1"
+                  value="0.7"
+                  step="0.1"
+                />
+                <div class="value"></div>
+              </div>
+
+              <div class="control-group">
+                <label for="cognitive"
+                  >Cognitive (c1): <span id="cognitiveValue">1.5</span></label
+                >
+                <input
+                  type="range"
+                  id="cognitive"
+                  min="0"
+                  max="3"
+                  value="1.5"
+                  step="0.1"
+                />
+                <div class="value"></div>
+              </div>
+
+              <div class="control-group">
+                <label for="social"
+                  >Social (c2): <span id="socialValue">1.5</span></label
+                >
+                <input
+                  type="range"
+                  id="social"
+                  min="0"
+                  max="3"
+                  value="1.5"
+                  step="0.1"
+                />
+                <div class="value"></div>
+              </div>
+
+              <div class="control-group">
+                <label for="maxAlpha"
+                  >Max Alpha: <span id="maxAlphaValue">0.25</span></label
+                >
+                <input
+                  type="range"
+                  id="maxAlpha"
+                  min="0.1"
+                  max="1"
+                  value="0.25"
+                  step="0.05"
+                />
+                <div class="value"></div>
+              </div>
+
+              <div class="control-group" style="grid-template-columns: 1fr">
+                <label style="display: flex; align-items: center; gap: 8px">
+                  <input type="checkbox" id="incrementTriangles" checked />
+                  Increase triangles on stagnation
+                </label>
+              </div>
+
+              <div class="control-group">
+                <label for="triangleStagnationThreshold"
+                  >Triangle growth stagnation threshold:
+                  <span id="triangleStagnationThresholdValue">25</span>
+                  iterations</label
+                >
+                <input
+                  type="range"
+                  id="triangleStagnationThreshold"
+                  min="5"
+                  max="300"
+                  value="25"
+                  step="5"
+                />
+                <div class="value"></div>
+              </div>
+
+              <div class="control-group">
+                <label for="triangleStagnationPercent"
+                  >Triangle growth minimum improvement:
+                  <span id="triangleStagnationPercentValue">2.0</span>%</label
+                >
+                <input
+                  type="range"
+                  id="triangleStagnationPercent"
+                  min="0.1"
+                  max="10"
+                  value="2.0"
+                  step="0.1"
+                />
+                <div class="value"></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="main">
+          <div id="canvas-container">
+            <!-- Two-canvases layout -->
+            <div
+              style="
+                display: flex;
+                gap: 20px;
+                padding: 16px;
+                width: 100%;
+                height: 100%;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 10px;
+                  align-items: center;
+                "
+              >
+                <h3
+                  style="
+                    margin: 0;
+                    color: #cbd5e1;
+                    font-size: 14px;
+                    font-weight: 600;
+                  "
+                >
+                  Source Image
+                </h3>
+                <canvas id="sourceCanvas"></canvas>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 10px;
+                  align-items: center;
+                "
+              >
+                <h3
+                  style="
+                    margin: 0;
+                    color: #cbd5e1;
+                    font-size: 14px;
+                    font-weight: 600;
+                  "
+                >
+                  PSO Reconstruction
+                </h3>
+                <canvas id="reconstructionCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="backdrop" class="drawer-backdrop"></div>
       </div>
 
-      <div class="canvas-container">
-        <div class="canvas-wrapper">
-          <h3>Source Image</h3>
-          <canvas id="sourceCanvas"></canvas>
-        </div>
-        <div class="canvas-wrapper">
-          <h3>PSO Reconstruction</h3>
-          <canvas id="reconstructionCanvas"></canvas>
-        </div>
-      </div>
-
-      <div class="controls-panel">
-        <div class="control-group">
-          <h3>Configuration</h3>
-          <div class="control-item">
-            <label for="numTriangles">
-              Number of Triangles: <span id="numTrianglesValue">250</span>
-            </label>
-            <input
-              type="range"
-              id="numTriangles"
-              min="10"
-              max="1000"
-              value="250"
-              step="10"
-            />
-          </div>
-          <div class="control-item">
-            <label for="swarmSize">
-              Swarm Size: <span id="swarmSizeValue">200</span>
-            </label>
-            <input
-              type="range"
-              id="swarmSize"
-              min="5"
-              max="500"
-              value="200"
-              step="5"
-            />
-          </div>
-          <div class="control-item">
-            <label for="inertia">
-              Inertia (w): <span id="inertiaValue">0.7</span>
-            </label>
-            <input
-              type="range"
-              id="inertia"
-              min="0"
-              max="1"
-              value="0.7"
-              step="0.1"
-            />
-          </div>
-          <div class="control-item">
-            <label for="cognitive">
-              Cognitive (c1): <span id="cognitiveValue">1.5</span>
-            </label>
-            <input
-              type="range"
-              id="cognitive"
-              min="0"
-              max="3"
-              value="1.5"
-              step="0.1"
-            />
-          </div>
-          <div class="control-item">
-            <label for="social">
-              Social (c2): <span id="socialValue">1.5</span>
-            </label>
-            <input
-              type="range"
-              id="social"
-              min="0"
-              max="3"
-              value="1.5"
-              step="0.1"
-            />
-          </div>
-          <div class="control-item">
-            <label for="maxAlpha">
-              Max Alpha: <span id="maxAlphaValue">0.25</span>
-            </label>
-            <input
-              type="range"
-              id="maxAlpha"
-              min="0.1"
-              max="1"
-              value="0.25"
-              step="0.05"
-            />
-          </div>
-          <div class="control-item">
-            <label>
-              <input type="checkbox" id="incrementTriangles" />
-              Increase triangles on stagnation
-            </label>
-          </div>
-          <div class="control-item">
-            <label for="triangleStagnationThreshold">
-              Triangle growth stagnation threshold:
-              <span id="triangleStagnationThresholdValue">25</span> iterations
-            </label>
-            <input
-              type="range"
-              id="triangleStagnationThreshold"
-              min="5"
-              max="300"
-              value="25"
-              step="5"
-            />
-          </div>
-          <div class="control-item">
-            <label for="triangleStagnationPercent">
-              Triangle growth minimum improvement:
-              <span id="triangleStagnationPercentValue">2.0</span>%
-            </label>
-            <input
-              type="range"
-              id="triangleStagnationPercent"
-              min="0.1"
-              max="10"
-              value="2.0"
-              step="0.1"
-            />
-          </div>
-        </div>
-
-        <div class="control-group">
-          <h3>Controls</h3>
-          <div class="button-group">
-            <button id="startButton" class="btn btn-primary">▶ Start</button>
-            <button id="pauseButton" class="btn btn-warning" disabled>
-              ⏸ Pause
-            </button>
-            <button id="resetButton" class="btn btn-danger">↻ Reset</button>
-            <button id="saveButton" class="btn btn-success">
-              💾 Save Image
-            </button>
-          </div>
-        </div>
-
-        <div class="control-group">
-          <h3>Progress</h3>
-          <div class="progress-info">
-            <div class="progress-item">
-              <span class="label">Iteration:</span>
-              <span id="iteration" class="value">0</span>
-            </div>
-            <div class="progress-item">
-              <span class="label">Best Fitness:</span>
-              <span id="fitness" class="value">N/A</span>
-            </div>
-            <div class="progress-item">
-              <span class="label">Status:</span>
-              <span id="status" class="value">Ready</span>
-            </div>
-          </div>
-        </div>
+      <!-- Generic modal (optional) -->
+      <div id="template-modal-backdrop" class="modal-backdrop"></div>
+      <div
+        id="template-modal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="template-modal-title"
+      >
+        <header>
+          <h3 id="template-modal-title">About Particle Swarm Painter</h3>
+          <button
+            class="close-btn"
+            id="template-modal-close"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </header>
+        <section id="template-modal-content">
+          <p>
+            This simulation reconstructs an image using Particle Swarm
+            Optimization and semi-transparent triangles. Upload any image, tweak
+            parameters in the sidebar, and watch the swarm paint in real time.
+          </p>
+        </section>
       </div>
     </div>
 
+    <script>
+      // Minimal UI helpers for drawer + modal
+      (function () {
+        const ui = (window.TemplateUI = window.TemplateUI || {});
+
+        // Drawer toggle (mobile)
+        (function () {
+          const sidebar = document.getElementById("sidebar");
+          const openBtn = document.getElementById("menu-toggle");
+          const backdrop = document.getElementById("backdrop");
+          const mq = window.matchMedia("(max-width: 900px)");
+          function closeDrawer() {
+            sidebar && sidebar.classList.remove("open");
+            backdrop && backdrop.classList.remove("show");
+          }
+          function openDrawer() {
+            sidebar && sidebar.classList.add("open");
+            backdrop && backdrop.classList.add("show");
+          }
+          openBtn &&
+            openBtn.addEventListener("click", () => {
+              if (!sidebar) return;
+              if (sidebar.classList.contains("open")) closeDrawer();
+              else openDrawer();
+            });
+          backdrop && backdrop.addEventListener("click", closeDrawer);
+          window.addEventListener("resize", () => {
+            if (!mq.matches) closeDrawer();
+          });
+        })();
+
+        // Modal API
+        (function () {
+          const modal = document.getElementById("template-modal");
+          const backdrop = document.getElementById("template-modal-backdrop");
+          const titleEl = document.getElementById("template-modal-title");
+          const contentEl = document.getElementById("template-modal-content");
+          const closeBtn = document.getElementById("template-modal-close");
+
+          function open(opts = {}) {
+            if (!modal || !backdrop) return;
+            if (opts.title && titleEl) titleEl.textContent = opts.title;
+            if (opts.html && contentEl) contentEl.innerHTML = opts.html;
+            modal.classList.add("show");
+            backdrop.classList.add("show");
+          }
+          function close() {
+            modal && modal.classList.remove("show");
+            backdrop && backdrop.classList.remove("show");
+          }
+
+          ui.openModal = open;
+          ui.closeModal = close;
+
+          closeBtn && closeBtn.addEventListener("click", close);
+          backdrop && backdrop.addEventListener("click", close);
+          document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") close();
+          });
+
+          // Wire the default info button to open the modal
+          const infoBtn = document.getElementById("template-info-btn");
+          infoBtn && infoBtn.addEventListener("click", () => open());
+        })();
+      })();
+    </script>
+    <!-- Chart.js for fitness chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="pso.js"></script>
     <script src="app.js"></script>
   </body>

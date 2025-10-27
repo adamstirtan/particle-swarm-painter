@@ -12,8 +12,14 @@ class PSOImagePainter {
     this.maxCanvasSize = 400; // Maximum canvas dimension for performance
     this.lastTrianglesSynced = null; // Track last PSO triangle count reflected in the UI
 
+    // Fitness chart state
+    this.fitnessHistory = [];
+    this.fitnessChart = null;
+    this.lastChartedIteration = -1;
+
     this.initializeElements();
     this.attachEventListeners();
+    this.initializeChart();
     this.updateStatus("Ready - Upload an image to begin");
   }
 
@@ -51,6 +57,9 @@ class PSOImagePainter {
     this.iterationDisplay = document.getElementById("iteration");
     this.fitnessDisplay = document.getElementById("fitness");
     this.statusDisplay = document.getElementById("status");
+
+    // Chart elements
+    this.fitnessChartCanvas = document.getElementById("fitnessChart");
   }
 
   attachEventListeners() {
@@ -126,6 +135,52 @@ class PSOImagePainter {
         this.pso.updateConfig({ triangleStagnationPercent: value });
       }
     });
+  }
+
+  initializeChart() {
+    try {
+      if (!this.fitnessChartCanvas || typeof Chart === "undefined") return;
+      const ctx = this.fitnessChartCanvas.getContext("2d");
+      this.fitnessChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: "Best Fitness",
+              data: [],
+              borderColor: "#5cf2c7",
+              backgroundColor: "rgba(92, 242, 199, 0.15)",
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.15,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              grid: { color: "rgba(231, 237, 246, 0.06)" },
+              ticks: { color: "#a7b1c2" },
+            },
+            y: {
+              grid: { color: "rgba(231, 237, 246, 0.06)" },
+              ticks: { color: "#a7b1c2" },
+            },
+          },
+          animation: false,
+          plugins: {
+            legend: { labels: { color: "#e7edf6" } },
+            tooltip: { mode: "index", intersect: false },
+          },
+        },
+      });
+    } catch (e) {
+      // Fail safe: no chart
+      this.fitnessChart = null;
+    }
   }
 
   handleImageUpload(event) {
@@ -266,6 +321,15 @@ class PSOImagePainter {
     }
 
     this.updateStatus("Reset - Ready to start");
+
+    // Reset chart
+    this.fitnessHistory = [];
+    this.lastChartedIteration = -1;
+    if (this.fitnessChart) {
+      this.fitnessChart.data.labels = [];
+      this.fitnessChart.data.datasets[0].data = [];
+      this.fitnessChart.update("none");
+    }
   }
 
   runOptimization() {
@@ -329,6 +393,30 @@ class PSOImagePainter {
     const fitness = this.pso.getBestFitness();
     if (fitness !== Infinity) {
       this.fitnessDisplay.textContent = fitness.toFixed(2);
+      // Update chart once per iteration
+      const iter = this.pso.getIteration();
+      if (
+        this.fitnessChart &&
+        iter !== this.lastChartedIteration &&
+        isFinite(fitness)
+      ) {
+        this.fitnessHistory.push({ x: iter, y: fitness });
+        // Keep last N points to avoid unbounded growth
+        const MAX_POINTS = 1000;
+        if (this.fitnessHistory.length > MAX_POINTS) {
+          this.fitnessHistory.splice(
+            0,
+            this.fitnessHistory.length - MAX_POINTS
+          );
+        }
+        // Rebuild chart data from history
+        this.fitnessChart.data.labels = this.fitnessHistory.map((p) => p.x);
+        this.fitnessChart.data.datasets[0].data = this.fitnessHistory.map(
+          (p) => p.y
+        );
+        this.fitnessChart.update("none");
+        this.lastChartedIteration = iter;
+      }
     } else {
       this.fitnessDisplay.textContent = "N/A";
     }
