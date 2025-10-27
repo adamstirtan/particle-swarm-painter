@@ -1,8 +1,3 @@
-/**
- * Particle Swarm Optimization for Image Reconstruction
- * Each particle represents a set of triangles that approximate an image
- */
-
 class Triangle {
   constructor(width, height, maxAlpha = 1) {
     // Initialize triangle with random vertices and color
@@ -157,6 +152,14 @@ class PSO {
         typeof config.trianglesIncrementAmount === "number"
           ? config.trianglesIncrementAmount
           : 10,
+      triangleStagnationThreshold:
+        typeof config.triangleStagnationThreshold === "number"
+          ? config.triangleStagnationThreshold
+          : 25,
+      triangleStagnationPercent:
+        typeof config.triangleStagnationPercent === "number"
+          ? config.triangleStagnationPercent
+          : 2.0,
       maxTrianglesCap:
         typeof config.maxTrianglesCap === "number"
           ? config.maxTrianglesCap
@@ -183,6 +186,11 @@ class PSO {
     this.globalBestFitness = Infinity;
     this.iteration = 0;
     this.noImproveIterations = 0;
+    this.stagnationWindowStartIteration = 0;
+    this.stagnationWindowStartBest = Infinity;
+    this.lastGrowthIteration = null;
+    this.lastGrowthAmount = 0;
+    this.lastGrowthDetails = null; // {relImprovement, minRequired}
 
     // Source image data
     this.sourceImageData = null;
@@ -319,20 +327,57 @@ class PSO {
       }
     }
 
-    // Incrementally add triangles every N iterations if enabled
+    // Initialize window baseline on first finite best
     if (
       this.config.incrementalTriangles &&
-      this.iteration % this.config.trianglesIncrementInterval === 0
+      isFinite(this.globalBestFitness) &&
+      !isFinite(this.stagnationWindowStartBest)
     ) {
-      const currentCount = this.config.numTriangles;
-      if (currentCount < this.config.maxTrianglesCap) {
-        const remaining = this.config.maxTrianglesCap - currentCount;
-        const inc = Math.max(
-          1,
-          Math.min(remaining, Math.floor(this.config.trianglesIncrementAmount))
-        );
-        this.increaseTrianglesBy(inc);
-        this.config.numTriangles = currentCount + inc;
+      this.stagnationWindowStartBest = this.globalBestFitness;
+      this.stagnationWindowStartIteration = this.iteration;
+    }
+
+    // Stagnation-based triangle growth based on percent improvement over a window
+    if (
+      this.config.incrementalTriangles &&
+      isFinite(this.stagnationWindowStartBest)
+    ) {
+      const windowLen = this.iteration - this.stagnationWindowStartIteration;
+      if (windowLen >= this.config.triangleStagnationThreshold) {
+        const startBest = this.stagnationWindowStartBest;
+        const currentBest = this.globalBestFitness;
+        if (startBest > 0 && isFinite(currentBest)) {
+          const relImprovement = (startBest - currentBest) / startBest;
+          const minRequired = Math.max(
+            0,
+            this.config.triangleStagnationPercent / 100
+          );
+          if (relImprovement < minRequired) {
+            const currentCount = this.config.numTriangles;
+            if (currentCount < this.config.maxTrianglesCap) {
+              const remaining = this.config.maxTrianglesCap - currentCount;
+              const inc = Math.max(
+                1,
+                Math.min(
+                  remaining,
+                  Math.floor(this.config.trianglesIncrementAmount)
+                )
+              );
+              this.increaseTrianglesBy(inc);
+              this.config.numTriangles = currentCount + inc;
+              this.lastGrowthIteration = this.iteration;
+              this.lastGrowthAmount = inc;
+              this.lastGrowthDetails = {
+                relImprovement,
+                minRequired,
+              };
+            }
+          }
+        }
+        // Reset window baseline after evaluation
+        this.stagnationWindowStartBest = this.globalBestFitness;
+        this.stagnationWindowStartIteration = this.iteration;
+        this.noImproveIterations = 0;
       }
     }
   }
@@ -389,6 +434,18 @@ class PSO {
         this.config.trianglesIncrementAmount = Math.max(
           1,
           Math.floor(config.trianglesIncrementAmount)
+        );
+      }
+      if (typeof config.triangleStagnationThreshold === "number") {
+        this.config.triangleStagnationThreshold = Math.max(
+          1,
+          Math.floor(config.triangleStagnationThreshold)
+        );
+      }
+      if (typeof config.triangleStagnationPercent === "number") {
+        this.config.triangleStagnationPercent = Math.max(
+          0,
+          Math.min(100, config.triangleStagnationPercent)
         );
       }
       if (typeof config.maxTrianglesCap === "number") {

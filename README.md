@@ -42,7 +42,7 @@ start index.html
    - **Cognitive (c1)**: How much particles trust their own best position (0-3)
    - **Social (c2)**: How much particles trust the swarm's best position (0-3)
      - **Max Alpha**: Caps triangle opacity (0.1–1.0). Lowering this prevents highly opaque triangles from dominating.
-   - **Increment Triangles**: When enabled, adds +10 triangles every 100 iterations to gradually increase detail.
+   - **Increment Triangles**: When enabled, adds +10 triangles when stagnation is detected to gradually increase detail.
 3. **Start Optimization**: Click "▶ Start" to begin the PSO algorithm
 4. **Monitor Progress**: Watch the iteration count and fitness score improve
 5. **Save Result**: Click "💾 Save Image" to download your reconstruction
@@ -104,9 +104,14 @@ Lower fitness scores indicate better matches to the source image.
 
 ### Increment Triangles
 
-- Adds ten triangles to the model every 100 iterations when enabled.
+- Adds ten triangles to the model when stagnation is detected (no fitness improvement).
 - Helps start fast with fewer primitives and grow detail over time.
 - There’s an internal safety cap (default 1000 triangles) to avoid unbounded growth.
+
+#### Stagnation threshold for triangle growth
+
+- The app considers it “stagnation” when the best fitness hasn’t improved for a set number of iterations.
+- Default threshold is 25 iterations. You can control this threshold in the UI.
 
 - Caps the maximum opacity of triangles.
 - Lower values encourage more subtle layering and reduce flat, opaque regions.

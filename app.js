@@ -1,5 +1,6 @@
 /**
- * Main Application Logic
+ * Particle Swarm Optimization for Image Reconstruction
+ * Each particle represents a set of triangles that approximate an image
  */
 
 class PSOImagePainter {
@@ -39,6 +40,12 @@ class PSOImagePainter {
     this.maxAlphaSlider = document.getElementById("maxAlpha");
     this.incrementalTrianglesCheckbox =
       document.getElementById("incrementTriangles");
+    this.triangleStagnationThresholdSlider = document.getElementById(
+      "triangleStagnationThreshold"
+    );
+    this.triangleStagnationPercentSlider = document.getElementById(
+      "triangleStagnationPercent"
+    );
 
     // Display elements
     this.iterationDisplay = document.getElementById("iteration");
@@ -103,6 +110,22 @@ class PSOImagePainter {
         this.pso.updateConfig({ incrementalTriangles: e.target.checked });
       }
     });
+    this.triangleStagnationThresholdSlider.addEventListener("input", (e) => {
+      const value = parseInt(e.target.value, 10);
+      document.getElementById("triangleStagnationThresholdValue").textContent =
+        String(value);
+      if (this.pso) {
+        this.pso.updateConfig({ triangleStagnationThreshold: value });
+      }
+    });
+    this.triangleStagnationPercentSlider.addEventListener("input", (e) => {
+      const value = parseFloat(e.target.value);
+      document.getElementById("triangleStagnationPercentValue").textContent =
+        value.toFixed(1);
+      if (this.pso) {
+        this.pso.updateConfig({ triangleStagnationPercent: value });
+      }
+    });
   }
 
   handleImageUpload(event) {
@@ -161,6 +184,13 @@ class PSOImagePainter {
       social: parseFloat(this.socialSlider.value),
       maxAlpha: parseFloat(this.maxAlphaSlider.value),
       incrementalTriangles: this.incrementalTrianglesCheckbox.checked,
+      triangleStagnationThreshold: parseInt(
+        this.triangleStagnationThresholdSlider.value,
+        10
+      ),
+      triangleStagnationPercent: parseFloat(
+        this.triangleStagnationPercentSlider.value
+      ),
       width: this.sourceCanvas.width,
       height: this.sourceCanvas.height,
     };
@@ -301,6 +331,19 @@ class PSOImagePainter {
       this.fitnessDisplay.textContent = fitness.toFixed(2);
     } else {
       this.fitnessDisplay.textContent = "N/A";
+    }
+
+    // Optional status nudge when triangle growth occurs
+    const lgIter = this.pso.lastGrowthIteration;
+    if (typeof lgIter === "number" && lgIter === this.pso.getIteration()) {
+      const det = this.pso.lastGrowthDetails || {};
+      const relPct =
+        det.relImprovement != null ? (det.relImprovement * 100).toFixed(2) : "";
+      const reqPct =
+        det.minRequired != null ? (det.minRequired * 100).toFixed(2) : "";
+      this.updateStatus(
+        `Triangles increased by +${this.pso.lastGrowthAmount} at iter ${lgIter} (Δ% ${relPct} < ${reqPct})`
+      );
     }
   }
 
