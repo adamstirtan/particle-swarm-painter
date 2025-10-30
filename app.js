@@ -21,6 +21,10 @@ class PSOImagePainter {
     this.attachEventListeners();
     this.initializeChart();
     this.updateStatus("Ready - Upload an image to begin");
+
+    // Only update displayed image when we beat the best-so-far fitness
+    this.displayedBestFitness = Infinity;
+    this.displayedBestTriangles = null;
   }
 
   initializeElements() {
@@ -320,6 +324,10 @@ class PSOImagePainter {
       );
     }
 
+    // Reset displayed best tracking
+    this.displayedBestFitness = Infinity;
+    this.displayedBestTriangles = null;
+
     this.updateStatus("Reset - Ready to start");
 
     // Reset chart
@@ -347,7 +355,8 @@ class PSOImagePainter {
   }
 
   renderBestSolution() {
-    const bestTriangles = this.pso.getBestTriangles();
+    // Only draw the best-so-far triangles we've approved for display
+    const bestTriangles = this.displayedBestTriangles;
     if (!bestTriangles) return;
 
     const ctx = this.reconstructionCtx;
@@ -393,6 +402,14 @@ class PSOImagePainter {
     const fitness = this.pso.getBestFitness();
     if (fitness !== Infinity) {
       this.fitnessDisplay.textContent = fitness.toFixed(2);
+
+      // Update displayed best image only if we beat all-time best
+      if (fitness < this.displayedBestFitness && this.pso.getBestTriangles()) {
+        const src = this.pso.getBestTriangles();
+        // Deep copy triangles to avoid later mutation
+        this.displayedBestTriangles = src.map((t) => t.clone());
+        this.displayedBestFitness = fitness;
+      }
       // Update chart once per iteration
       const iter = this.pso.getIteration();
       if (
