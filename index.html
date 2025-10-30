@@ -461,7 +461,16 @@
               <h3>Configuration</h3>
 
               <div class="control-group">
-                <label for="numTriangles"
+                <label for="shapeType">Shape:</label>
+                <select id="shapeType">
+                  <option value="triangle" selected>Triangles</option>
+                  <option value="circle">Circles</option>
+                </select>
+                <div class="value"></div>
+              </div>
+
+              <div class="control-group">
+                <label for="numTriangles" id="numShapesLabel"
                   >Number of Triangles:
                   <span id="numTrianglesValue">10</span></label
                 >

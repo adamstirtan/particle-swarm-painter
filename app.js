@@ -50,6 +50,8 @@ class PSOImagePainter {
     this.maxAlphaSlider = document.getElementById("maxAlpha");
     this.incrementalTrianglesCheckbox =
       document.getElementById("incrementTriangles");
+    this.shapeTypeSelect = document.getElementById("shapeType");
+    this.numShapesLabel = document.getElementById("numShapesLabel");
     this.triangleStagnationThresholdSlider = document.getElementById(
       "triangleStagnationThreshold"
     );
@@ -77,6 +79,16 @@ class PSOImagePainter {
     this.pauseButton.addEventListener("click", () => this.pause());
     this.resetButton.addEventListener("click", () => this.reset());
     this.saveButton.addEventListener("click", () => this.saveImage());
+    // Shape type selection
+    if (this.shapeTypeSelect) {
+      this.shapeTypeSelect.addEventListener("change", () => {
+        // Update label to match selected shape
+        const shape =
+          this.shapeTypeSelect.value === "circle" ? "Circles" : "Triangles";
+        if (this.numShapesLabel)
+          this.numShapesLabel.childNodes[0].nodeValue = `Number of ${shape}: `;
+      });
+    }
 
     // Parameter sliders
     this.numTrianglesSlider.addEventListener("input", (e) => {
@@ -242,6 +254,7 @@ class PSOImagePainter {
       cognitive: parseFloat(this.cognitiveSlider.value),
       social: parseFloat(this.socialSlider.value),
       maxAlpha: parseFloat(this.maxAlphaSlider.value),
+      shapeType: this.shapeTypeSelect ? this.shapeTypeSelect.value : "triangle",
       incrementalTriangles: this.incrementalTrianglesCheckbox.checked,
       triangleStagnationThreshold: parseInt(
         this.triangleStagnationThresholdSlider.value,
@@ -279,10 +292,14 @@ class PSOImagePainter {
     // Ensure PSO reflects current slider values before starting
     const desiredTriangles = parseInt(this.numTrianglesSlider.value, 10);
     const desiredSwarm = parseInt(this.swarmSizeSlider.value, 10);
+    const desiredShape = this.shapeTypeSelect
+      ? this.shapeTypeSelect.value
+      : "triangle";
     if (
       !this.pso ||
       this.pso.config.numTriangles !== desiredTriangles ||
-      this.pso.config.swarmSize !== desiredSwarm
+      this.pso.config.swarmSize !== desiredSwarm ||
+      this.pso.config.shapeType !== desiredShape
     ) {
       this.initializePSO();
     }
@@ -290,6 +307,7 @@ class PSOImagePainter {
     this.isRunning = true;
     this.startButton.disabled = true;
     this.pauseButton.disabled = false;
+    if (this.shapeTypeSelect) this.shapeTypeSelect.disabled = true;
     this.updateStatus("Optimizing...");
 
     this.runOptimization();
@@ -299,6 +317,7 @@ class PSOImagePainter {
     this.isRunning = false;
     this.startButton.disabled = false;
     this.pauseButton.disabled = true;
+    if (this.shapeTypeSelect) this.shapeTypeSelect.disabled = false;
     this.updateStatus("Paused");
 
     if (this.animationFrameId) {
@@ -338,6 +357,8 @@ class PSOImagePainter {
       this.fitnessChart.data.datasets[0].data = [];
       this.fitnessChart.update("none");
     }
+
+    if (this.shapeTypeSelect) this.shapeTypeSelect.disabled = false;
   }
 
   runOptimization() {
@@ -368,16 +389,22 @@ class PSOImagePainter {
     ctx.fillRect(0, 0, width, height);
 
     // Draw all triangles
+    const shapeType = this.pso?.config?.shapeType || "triangle";
     bestTriangles.forEach((t) => {
       ctx.beginPath();
-      ctx.moveTo(t.x1, t.y1);
-      ctx.lineTo(t.x2, t.y2);
-      ctx.lineTo(t.x3, t.y3);
-      ctx.closePath();
+      if (shapeType === "triangle") {
+        ctx.moveTo(t.x1, t.y1);
+        ctx.lineTo(t.x2, t.y2);
+        ctx.lineTo(t.x3, t.y3);
+        ctx.closePath();
+      } else {
+        ctx.arc(t.cx, t.cy, t.radius, 0, Math.PI * 2);
+      }
       ctx.fillStyle = `rgba(${Math.floor(t.r)}, ${Math.floor(
         t.g
       )}, ${Math.floor(t.b)}, ${t.a})`;
       ctx.fill();
+      if (shapeType === "circle") ctx.beginPath();
     });
   }
 

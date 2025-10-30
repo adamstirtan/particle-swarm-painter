@@ -52,23 +52,63 @@ class Triangle {
   }
 }
 
+class CircleShape {
+  constructor(width, height, maxAlpha = 1) {
+    this.width = width;
+    this.height = height;
+    // Center position and radius
+    this.cx = Math.random() * width;
+    this.cy = Math.random() * height;
+    // Start with a modest radius
+    this.radius = Math.random() * (Math.min(width, height) * 0.3 + 10) + 5;
+    // Color
+    this.r = Math.random() * 255;
+    this.g = Math.random() * 255;
+    this.b = Math.random() * 255;
+    const maxA = Math.max(0.1, Math.min(1, maxAlpha));
+    this.a = 0.1 + Math.random() * (maxA - 0.1);
+  }
+  toArray() {
+    return [this.cx, this.cy, this.radius, this.r, this.g, this.b, this.a];
+  }
+  fromArray(arr) {
+    [this.cx, this.cy, this.radius, this.r, this.g, this.b, this.a] = arr;
+  }
+  clone() {
+    const c = new CircleShape(0, 0);
+    c.fromArray(this.toArray());
+    return c;
+  }
+}
+
 class Particle {
-  constructor(numTriangles, width, height, margin = 0, maxAlpha = 1) {
+  constructor(
+    numTriangles,
+    width,
+    height,
+    margin = 0,
+    maxAlpha = 1,
+    shapeType = "triangle"
+  ) {
     this.width = width;
     this.height = height;
     this.numTriangles = numTriangles;
     this.margin = margin;
     this.maxAlpha = Math.max(0.1, Math.min(1, maxAlpha));
+    this.shapeType = shapeType === "circle" ? "circle" : "triangle";
+    this.dimsPerShape = this.shapeType === "circle" ? 7 : 10;
 
     // Current position (triangles)
     this.triangles = [];
     for (let i = 0; i < numTriangles; i++) {
-      this.triangles.push(new Triangle(width, height, this.maxAlpha));
+      if (this.shapeType === "circle")
+        this.triangles.push(new CircleShape(width, height, this.maxAlpha));
+      else this.triangles.push(new Triangle(width, height, this.maxAlpha));
     }
 
     // Velocity for each parameter of each triangle
     this.velocity = [];
-    for (let i = 0; i < numTriangles * 10; i++) {
+    for (let i = 0; i < numTriangles * this.dimsPerShape; i++) {
       this.velocity.push((Math.random() - 0.5) * 10);
     }
 
@@ -90,8 +130,10 @@ class Particle {
 
   setPosition(pos) {
     for (let i = 0; i < this.numTriangles; i++) {
-      const offset = i * 10;
-      this.triangles[i].fromArray(pos.slice(offset, offset + 10));
+      const offset = i * this.dimsPerShape;
+      this.triangles[i].fromArray(
+        pos.slice(offset, offset + this.dimsPerShape)
+      );
     }
   }
 
@@ -104,18 +146,25 @@ class Particle {
 
   clampPosition() {
     this.triangles.forEach((t) => {
-      // Clamp vertices to canvas bounds
       const minX = -this.margin;
       const maxX = this.width + this.margin;
       const minY = -this.margin;
       const maxY = this.height + this.margin;
 
-      t.x1 = Math.max(minX, Math.min(maxX, t.x1));
-      t.y1 = Math.max(minY, Math.min(maxY, t.y1));
-      t.x2 = Math.max(minX, Math.min(maxX, t.x2));
-      t.y2 = Math.max(minY, Math.min(maxY, t.y2));
-      t.x3 = Math.max(minX, Math.min(maxX, t.x3));
-      t.y3 = Math.max(minY, Math.min(maxY, t.y3));
+      if (this.shapeType === "triangle") {
+        t.x1 = Math.max(minX, Math.min(maxX, t.x1));
+        t.y1 = Math.max(minY, Math.min(maxY, t.y1));
+        t.x2 = Math.max(minX, Math.min(maxX, t.x2));
+        t.y2 = Math.max(minY, Math.min(maxY, t.y2));
+        t.x3 = Math.max(minX, Math.min(maxX, t.x3));
+        t.y3 = Math.max(minY, Math.min(maxY, t.y3));
+      } else {
+        // Circle center within margins and radius reasonable
+        t.cx = Math.max(minX, Math.min(maxX, t.cx));
+        t.cy = Math.max(minY, Math.min(maxY, t.cy));
+        const maxR = Math.max(this.width, this.height) + this.margin;
+        t.radius = Math.max(1, Math.min(maxR, t.radius));
+      }
 
       // Clamp colors
       t.r = Math.max(0, Math.min(255, t.r));
@@ -139,6 +188,10 @@ class PSO {
       width: config.width,
       height: config.height,
       maxAlpha: typeof config.maxAlpha === "number" ? config.maxAlpha : 0.8,
+      shapeType:
+        typeof config.shapeType === "string" && config.shapeType === "circle"
+          ? "circle"
+          : "triangle",
       // Incremental triangle growth
       incrementalTriangles:
         typeof config.incrementalTriangles === "boolean"
@@ -184,6 +237,7 @@ class PSO {
     this.particles = [];
     this.globalBestTriangles = null;
     this.globalBestFitness = Infinity;
+    this.dimsPerShape = this.config.shapeType === "circle" ? 7 : 10;
     this.iteration = 0;
     this.noImproveIterations = 0;
     this.stagnationWindowStartIteration = 0;
@@ -213,7 +267,8 @@ class PSO {
           this.config.width,
           this.config.height,
           this.config.offscreenMargin,
-          this.config.maxAlpha
+          this.config.maxAlpha,
+          this.config.shapeType
         )
       );
     }
@@ -230,14 +285,19 @@ class PSO {
 
     triangles.forEach((t) => {
       ctx.beginPath();
-      ctx.moveTo(t.x1, t.y1);
-      ctx.lineTo(t.x2, t.y2);
-      ctx.lineTo(t.x3, t.y3);
-      ctx.closePath();
+      if (this.config.shapeType === "triangle") {
+        ctx.moveTo(t.x1, t.y1);
+        ctx.lineTo(t.x2, t.y2);
+        ctx.lineTo(t.x3, t.y3);
+        ctx.closePath();
+      } else {
+        ctx.arc(t.cx, t.cy, t.radius, 0, Math.PI * 2);
+      }
       ctx.fillStyle = `rgba(${Math.floor(t.r)}, ${Math.floor(
         t.g
       )}, ${Math.floor(t.b)}, ${t.a})`;
       ctx.fill();
+      if (this.config.shapeType === "circle") ctx.beginPath(); // reset path state for next arc
     });
 
     return ctx.getImageData(0, 0, this.config.width, this.config.height);
@@ -477,11 +537,14 @@ class PSO {
       // Extend each particle
       this.particles.forEach((p) => {
         for (let i = 0; i < k; i++) {
-          const nt = new Triangle(p.width, p.height, p.maxAlpha);
+          const nt =
+            this.config.shapeType === "circle"
+              ? new CircleShape(p.width, p.height, p.maxAlpha)
+              : new Triangle(p.width, p.height, p.maxAlpha);
           p.triangles.push(nt);
           p.numTriangles += 1;
-          // Extend velocity with 10 new components
-          for (let v = 0; v < 10; v++) {
+          // Extend velocity with dimsPerShape new components
+          for (let v = 0; v < this.dimsPerShape; v++) {
             p.velocity.push((Math.random() - 0.5) * 10);
           }
           // Extend personal best with a clone of the new triangle
@@ -500,11 +563,18 @@ class PSO {
         );
       } else {
         for (let i = 0; i < k; i++) {
-          const nt = new Triangle(
-            this.config.width,
-            this.config.height,
-            this.config.maxAlpha
-          );
+          const nt =
+            this.config.shapeType === "circle"
+              ? new CircleShape(
+                  this.config.width,
+                  this.config.height,
+                  this.config.maxAlpha
+                )
+              : new Triangle(
+                  this.config.width,
+                  this.config.height,
+                  this.config.maxAlpha
+                );
           this.globalBestTriangles.push(nt);
         }
       }
